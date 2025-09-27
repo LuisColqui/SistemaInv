@@ -11,6 +11,7 @@ const ProductList = ({ onEditProduct, onNewProduct, refreshTrigger }) => {
     estado: ''
   });
   const [sortConfig, setSortConfig] = useState({ key: 'nombreProducto', direction: 'asc' });
+  const [showFilters, setShowFilters] = useState(false);
 
   const loadProducts = async () => {
     setLoading(true);
@@ -36,6 +37,31 @@ const ProductList = ({ onEditProduct, onNewProduct, refreshTrigger }) => {
   useEffect(() => {
     loadProducts();
   }, [refreshTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const activeFiltersCount = React.useMemo(() => {
+    let count = 0;
+    if (filters.search.trim()) count++;
+    if (filters.categoria.trim()) count++;
+    if (filters.estado !== '') count++;
+    return count;
+  }, [filters]);
+
+  const toggleFilters = () => setShowFilters((v) => !v);
+
+  const getProductCategoryName = (product) => {
+    if (!product) return '';
+    if (typeof product.categoriaProducto === 'string') return product.categoriaProducto;
+    if (product.categoriaProducto?.nombreCategoriaProducto) {
+      return product.categoriaProducto.nombreCategoriaProducto;
+    }
+    if (product.categoriaProducto?.nombreCategoria) {
+      return product.categoriaProducto.nombreCategoria;
+    }
+    if (product.categoriaProductoNombre) {
+      return product.categoriaProductoNombre;
+    }
+    return '';
+  };
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -72,6 +98,11 @@ const ProductList = ({ onEditProduct, onNewProduct, refreshTrigger }) => {
       sortableProducts.sort((a, b) => {
         let aValue = a[sortConfig.key];
         let bValue = b[sortConfig.key];
+
+        if (sortConfig.key === 'categoriaProducto') {
+          aValue = getProductCategoryName(a);
+          bValue = getProductCategoryName(b);
+        }
 
         // Manejar valores numéricos
         if (typeof aValue === 'number' && typeof bValue === 'number') {
@@ -136,87 +167,113 @@ const ProductList = ({ onEditProduct, onNewProduct, refreshTrigger }) => {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md">
+      {/* Toolbar */}
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <svg className="h-6 w-6 text-indigo-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-5 w-5 text-indigo-600 dark:text-indigo-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Lista de Productos</h2>
-              <p className="text-sm text-gray-500 mt-1">
-                {products.length} producto{products.length !== 1 ? 's' : ''} encontrado{products.length !== 1 ? 's' : ''}
-              </p>
+              <h2 className="text-base font-semibold text-gray-900 dark:text-white leading-tight">Lista de Productos</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{products.length} {products.length === 1 ? 'producto' : 'productos'} encontrados</p>
             </div>
           </div>
-          <button
-            onClick={onNewProduct}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-150 ease-in-out flex items-center"
-          >
-            <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-            </svg>
-            Nuevo Producto
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={toggleFilters}
+              className="inline-flex items-center px-3 h-9 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-sm"
+              title="Mostrar/Ocultar filtros"
+            >
+              <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 13.414V19a1 1 0 01-1.447.894L11 19v-5.586L3.293 6.707A1 1 0 013 6V4z" />
+              </svg>
+              Filtros
+              {activeFiltersCount > 0 && (
+                <span className="ml-2 inline-flex items-center justify-center px-1.5 min-w-[1.25rem] h-5 rounded-full bg-indigo-50 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 text-xs font-medium">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={loadProducts}
+              className="inline-flex items-center px-3 h-9 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-sm"
+              title="Recargar"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v6h6M20 20v-6h-6M5 15a7 7 0 0012.124 2.121M19 9a7 7 0 00-12.124-2.121" />
+              </svg>
+            </button>
+            <button
+              onClick={onNewProduct}
+              className="inline-flex items-center px-3 h-9 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-sm"
+            >
+              <svg className="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+              </svg>
+              Nuevo
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Filtros */}
-      <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
-            <input
-              type="text"
-              name="search"
-              value={filters.search}
-              onChange={handleFilterChange}
-              placeholder="Nombre, código o descripción..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
-            <input
-              type="text"
-              name="categoria"
-              value={filters.categoria}
-              onChange={handleFilterChange}
-              placeholder="Filtrar por categoría..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-            <select
-              name="estado"
-              value={filters.estado}
-              onChange={handleFilterChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="">Todos</option>
-              <option value="true">Activo</option>
-              <option value="false">Inactivo</option>
-            </select>
-          </div>
-          <div className="flex items-end space-x-2">
-            <button
-              onClick={applyFilters}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium transition duration-150 ease-in-out"
-            >
-              Filtrar
-            </button>
-            <button
-              onClick={clearFilters}
-              className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition duration-150 ease-in-out"
-            >
-              Limpiar
-            </button>
+      {/* Filtros (colapsables) */}
+      {showFilters && (
+        <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Buscar</label>
+              <input
+                type="text"
+                name="search"
+                value={filters.search}
+                onChange={handleFilterChange}
+                placeholder="Nombre, código o descripción..."
+                className="w-full px-2.5 h-9 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Categoría</label>
+              <input
+                type="text"
+                name="categoria"
+                value={filters.categoria}
+                onChange={handleFilterChange}
+                placeholder="Filtrar por categoría..."
+                className="w-full px-2.5 h-9 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Estado</label>
+              <select
+                name="estado"
+                value={filters.estado}
+                onChange={handleFilterChange}
+                className="w-full px-2.5 h-9 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+              >
+                <option value="">Todos</option>
+                <option value="true">Activo</option>
+                <option value="false">Inactivo</option>
+              </select>
+            </div>
+            <div className="flex items-center md:justify-end space-x-2">
+              <button
+                onClick={applyFilters}
+                className="inline-flex items-center px-3 h-9 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-sm"
+              >
+                Filtrar
+              </button>
+              <button
+                onClick={clearFilters}
+                className="inline-flex items-center px-3 h-9 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-sm"
+              >
+                Limpiar
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Contenido */}
       <div className="px-6 py-4">
@@ -252,11 +309,11 @@ const ProductList = ({ onEditProduct, onNewProduct, refreshTrigger }) => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
               <thead className="bg-gray-50">
                 <tr>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('codigoProducto')}
                   >
                     <div className="flex items-center">
@@ -264,7 +321,7 @@ const ProductList = ({ onEditProduct, onNewProduct, refreshTrigger }) => {
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('nombreProducto')}
                   >
                     <div className="flex items-center">
@@ -272,7 +329,7 @@ const ProductList = ({ onEditProduct, onNewProduct, refreshTrigger }) => {
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('categoriaProducto')}
                   >
                     <div className="flex items-center">
@@ -280,7 +337,7 @@ const ProductList = ({ onEditProduct, onNewProduct, refreshTrigger }) => {
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-4 py-2 text-right text-xs font-medium text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('stockProducto')}
                   >
                     <div className="flex items-center">
@@ -288,7 +345,7 @@ const ProductList = ({ onEditProduct, onNewProduct, refreshTrigger }) => {
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-4 py-2 text-right text-xs font-medium text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('precioVentaProducto')}
                   >
                     <div className="flex items-center">
@@ -296,14 +353,14 @@ const ProductList = ({ onEditProduct, onNewProduct, refreshTrigger }) => {
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-4 py-2 text-center text-xs font-medium text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('estadoProducto')}
                   >
                     <div className="flex items-center">
                       Estado {getSortIcon('estadoProducto')}
                     </div>
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Acciones
                   </th>
                 </tr>
@@ -311,27 +368,27 @@ const ProductList = ({ onEditProduct, onNewProduct, refreshTrigger }) => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {sortedProducts.map((product) => (
                   <tr key={product.idProducto} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-4 py-2 whitespace-nowrap font-medium text-gray-900">
                       {product.codigoProducto}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-2 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{product.nombreProducto}</div>
-                        <div className="text-sm text-gray-500">{product.descripcionProducto}</div>
+                        <div className="font-medium text-gray-900">{product.nombreProducto}</div>
+                        <div className="text-gray-500">{product.descripcionProducto}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {product.categoriaProducto}
+                    <td className="px-4 py-2 whitespace-nowrap text-gray-900">
+                      {getProductCategoryName(product) || 'Sin categoría'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
+                    <td className="px-4 py-2 whitespace-nowrap text-right">
+                      <div className="text-gray-900">
                         {product.stockProducto} {product.unidadMedidaProducto}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 py-2 whitespace-nowrap text-right text-gray-900">
                       {formatCurrency(product.precioVentaProducto)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-2 whitespace-nowrap text-center">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         product.estadoProducto 
                           ? 'bg-green-100 text-green-800' 
@@ -340,7 +397,7 @@ const ProductList = ({ onEditProduct, onNewProduct, refreshTrigger }) => {
                         {product.estadoProducto ? 'Activo' : 'Inactivo'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-4 py-2 whitespace-nowrap text-right font-medium">
                       <div className="flex justify-end space-x-2">
                         <button
                           onClick={() => onEditProduct(product)}

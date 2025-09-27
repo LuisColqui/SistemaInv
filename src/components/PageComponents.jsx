@@ -1,6 +1,7 @@
 import React from 'react';
 import EmpresaConfig from './EmpresaConfig';
 import ProductosManager from './ProductosManager';
+import CategoriesManager from './CategoriesManager';
 
 const PagePlaceholder = ({ title, description, icon }) => {
   return (
@@ -38,17 +39,9 @@ export const InventarioPage = () => (
   />
 );
 
-export const CategoriasPage = () => (
-  <PagePlaceholder
-    title="Gestión de Categorías"
-    description="Organiza tus productos en categorías y subcategorías."
-    icon={
-      <svg className="h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14-7l2 2-2 2M5 13l-2-2 2-2m0-2h14v14H3V4z" />
-      </svg>
-    }
-  />
-);
+export const CategoriasPage = () => {
+  return <CategoriesManager />;
+};
 
 export const ProveedoresPage = () => (
   <PagePlaceholder

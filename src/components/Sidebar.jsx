@@ -80,9 +80,9 @@ const Sidebar = ({ currentPage, onPageChange }) => {
   ];
 
   return (
-    <div className={`bg-white shadow-lg transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'} min-h-screen`}>
+    <div className={`relative bg-white dark:bg-gray-800 shadow-lg transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'} min-h-screen border-r border-gray-200 dark:border-gray-700`}>
       {/* Header del Sidebar */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           {!isCollapsed && (
             <div className="flex items-center space-x-3">
@@ -92,17 +92,17 @@ const Sidebar = ({ currentPage, onPageChange }) => {
                 </svg>
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-gray-900">Sistema</h2>
-                <p className="text-xs text-gray-500">Inventarios</p>
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Sistema</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Inventarios</p>
               </div>
             </div>
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
             <svg 
-              className={`h-5 w-5 text-gray-600 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} 
+              className={`h-5 w-5 text-gray-600 dark:text-gray-300 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -121,11 +121,11 @@ const Sidebar = ({ currentPage, onPageChange }) => {
             onClick={() => onPageChange(item.id)}
             className={`w-full flex items-center px-3 py-3 mb-1 rounded-lg transition-all duration-200 ${
               currentPage === item.id
-                ? 'bg-indigo-50 text-indigo-700 border-r-2 border-indigo-500'
-                : 'text-gray-700 hover:bg-gray-50 hover:text-indigo-600'
+                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-r-2 border-indigo-500'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-indigo-600 dark:hover:text-indigo-400'
             }`}
           >
-            <span className={`flex-shrink-0 ${currentPage === item.id ? 'text-indigo-600' : 'text-gray-400'}`}>
+            <span className={`flex-shrink-0 ${currentPage === item.id ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`}>
               {item.icon}
             </span>
             {!isCollapsed && (

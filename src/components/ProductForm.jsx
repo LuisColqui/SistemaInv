@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import productService from '../services/productService';
+import categoryService from '../services/categoryService';
 
 const ProductForm = ({ product, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -9,7 +10,7 @@ const ProductForm = ({ product, onSave, onCancel }) => {
     precioCompraProducto: '',
     stockProducto: '',
     codigoProducto: '',
-    categoriaProducto: '',
+    idCategoriaProducto: '',
     unidadMedidaProducto: 'unidad',
     estadoProducto: true
   });
@@ -17,6 +18,10 @@ const ProductForm = ({ product, onSave, onCancel }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [isEditing, setIsEditing] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState(null);
+  const [pendingCategoryName, setPendingCategoryName] = useState('');
 
   // Unidades de medida predefinidas
   const unidadesMedida = [
@@ -34,8 +39,60 @@ const ProductForm = ({ product, onSave, onCancel }) => {
   ];
 
   useEffect(() => {
+    const fetchCategories = async () => {
+      setCategoriesLoading(true);
+      setCategoriesError(null);
+
+      try {
+        const response = await categoryService.getCategoriesByEmpresa();
+        if (response.success) {
+          const rawCategories = Array.isArray(response.data) ? response.data : [];
+          const activeCategories = rawCategories.filter(cat => cat.estadoCategoria !== false);
+          setCategories(activeCategories);
+        } else {
+          setCategories([]);
+          setCategoriesError(response.message || 'No se pudieron cargar las categorías');
+        }
+      } catch (error) {
+        console.error('Error loading categories:', error);
+        setCategories([]);
+        setCategoriesError('Error al cargar las categorías');
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    if (!pendingCategoryName || formData.idCategoriaProducto || !categories.length) {
+      return;
+    }
+
+    const matchedCategory = categories.find(cat => {
+      const categoryName = cat?.nombreCategoriaProducto || cat?.nombreCategoria || '';
+      return categoryName.toLowerCase() === pendingCategoryName.toLowerCase();
+    });
+
+    if (matchedCategory) {
+      setFormData(prev => ({
+        ...prev,
+        idCategoriaProducto: String(matchedCategory.idCategoriaProducto)
+      }));
+      setPendingCategoryName('');
+    }
+  }, [pendingCategoryName, categories, formData.idCategoriaProducto]);
+
+  useEffect(() => {
     if (product) {
       setIsEditing(true);
+      const resolvedCategoryId = product.idCategoriaProducto ?? product?.categoriaProducto?.idCategoriaProducto ?? '';
+      const resolvedCategoryName =
+        product?.categoriaProducto?.nombreCategoriaProducto ??
+        product?.categoriaProductoNombre ??
+        (typeof product?.categoriaProducto === 'string' ? product.categoriaProducto : '');
+
       setFormData({
         nombreProducto: product.nombreProducto || '',
         descripcionProducto: product.descripcionProducto || '',
@@ -43,10 +100,11 @@ const ProductForm = ({ product, onSave, onCancel }) => {
         precioCompraProducto: product.precioCompraProducto || '',
         stockProducto: product.stockProducto || '',
         codigoProducto: product.codigoProducto || '',
-        categoriaProducto: product.categoriaProducto || '',
+        idCategoriaProducto: resolvedCategoryId ? String(resolvedCategoryId) : '',
         unidadMedidaProducto: product.unidadMedidaProducto || 'unidad',
         estadoProducto: product.estadoProducto !== undefined ? product.estadoProducto : true
       });
+      setPendingCategoryName(resolvedCategoryName || '');
     } else {
       setIsEditing(false);
       setFormData({
@@ -56,10 +114,11 @@ const ProductForm = ({ product, onSave, onCancel }) => {
         precioCompraProducto: '',
         stockProducto: '',
         codigoProducto: '',
-        categoriaProducto: '',
+        idCategoriaProducto: '',
         unidadMedidaProducto: 'unidad',
         estadoProducto: true
       });
+      setPendingCategoryName('');
     }
   }, [product]);
 
@@ -86,8 +145,8 @@ const ProductForm = ({ product, onSave, onCancel }) => {
     }
 
     // Validar categoría
-    if (!formData.categoriaProducto.trim()) {
-      newErrors.categoriaProducto = 'La categoría es requerida';
+    if (!formData.idCategoriaProducto) {
+      newErrors.idCategoriaProducto = 'La categoría es requerida';
     }
 
     // Validar precio de compra
@@ -189,7 +248,10 @@ const ProductForm = ({ product, onSave, onCancel }) => {
         ...formData,
         precioVentaProducto: parseFloat(formData.precioVentaProducto),
         precioCompraProducto: parseFloat(formData.precioCompraProducto),
-        stockProducto: parseInt(formData.stockProducto)
+        stockProducto: parseInt(formData.stockProducto),
+        idCategoriaProducto: formData.idCategoriaProducto
+          ? parseInt(formData.idCategoriaProducto, 10)
+          : null
       };
 
       let response;
@@ -302,22 +364,37 @@ const ProductForm = ({ product, onSave, onCancel }) => {
 
                 {/* Categoría */}
                 <div>
-                  <label htmlFor="categoriaProducto" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="idCategoriaProducto" className="block text-sm font-medium text-gray-700 mb-2">
                     Categoría *
                   </label>
-                  <input
-                    type="text"
-                    id="categoriaProducto"
-                    name="categoriaProducto"
-                    value={formData.categoriaProducto}
+                  <select
+                    id="idCategoriaProducto"
+                    name="idCategoriaProducto"
+                    value={formData.idCategoriaProducto}
                     onChange={handleChange}
+                    disabled={categoriesLoading || categories.length === 0}
                     className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                      errors.categoriaProducto ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="Ej: Electrónicos"
-                  />
-                  {errors.categoriaProducto && (
-                    <p className="mt-1 text-sm text-red-600">{errors.categoriaProducto}</p>
+                      errors.idCategoriaProducto ? 'border-red-300' : 'border-gray-300'
+                    } ${categoriesLoading ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                  >
+                    <option value="">
+                      {categoriesLoading
+                        ? 'Cargando categorías...'
+                        : categories.length === 0
+                          ? 'No hay categorías disponibles'
+                          : 'Selecciona una categoría'}
+                    </option>
+                    {categories.map(category => (
+                      <option key={category.idCategoriaProducto} value={String(category.idCategoriaProducto)}>
+                        {category.nombreCategoriaProducto || category.nombreCategoria}
+                      </option>
+                    ))}
+                  </select>
+                  {categoriesError && !errors.idCategoriaProducto && (
+                    <p className="mt-1 text-sm text-yellow-600">{categoriesError}</p>
+                  )}
+                  {errors.idCategoriaProducto && (
+                    <p className="mt-1 text-sm text-red-600">{errors.idCategoriaProducto}</p>
                   )}
                 </div>
 
