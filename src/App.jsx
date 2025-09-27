@@ -4,6 +4,7 @@ import Login from './components/Login'
 import Dashboard from './pages/Dashboard'
 import { authService } from './services/authService'
 import { ThemeProvider } from './contexts/ThemeContext'
+import ToastProvider from './contexts/ToastContext'
 import './App.css'
 
 function App() {
@@ -39,43 +40,44 @@ function App() {
   }
 
   return (
-    <ThemeProvider>
-      <Router>
-        <div className="App">
-          <Routes>
-            <Route 
-              path="/login" 
-              element={
-                isAuthenticated ? 
-                  <Navigate to="/dashboard" replace /> : 
-                  <Login onLoginSuccess={handleLoginSuccess} />
-              } 
-            />
-            <Route 
-              path="/dashboard" 
-              element={
-                isAuthenticated ? 
-                  <Dashboard /> : 
-                  <Navigate to="/login" replace />
-              } 
-            />
-            <Route 
-              path="/" 
-              element={
-                <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />
-              } 
-            />
-            {/* Ruta catch-all para páginas no encontradas */}
-            <Route 
-              path="*" 
-              element={
-                <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />
-              } 
-            />
-          </Routes>
-        </div>
-      </Router>
-    </ThemeProvider>
+    <ToastProvider>
+      <ThemeProvider>
+        <Router>
+          <div className="App">
+            <Routes>
+              <Route
+                path="/login"
+                element={
+                  isAuthenticated ? (
+                    <Navigate to="/dashboard" replace />
+                  ) : (
+                    <Login onLoginSuccess={handleLoginSuccess} />
+                  )
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />
+                }
+              />
+              <Route
+                path="/"
+                element={
+                  <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />
+                }
+              />
+              <Route
+                path="*"
+                element={
+                  <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />
+                }
+              />
+            </Routes>
+          </div>
+        </Router>
+      </ThemeProvider>
+    </ToastProvider>
   )
 }
 

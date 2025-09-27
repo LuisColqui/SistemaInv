@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import ThemeContext from '../contexts/ThemeContext';
 
 const Sidebar = ({ currentPage, onPageChange }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -79,6 +80,8 @@ const Sidebar = ({ currentPage, onPageChange }) => {
     },
   ];
 
+  const { isDarkMode, toggleTheme } = useContext(ThemeContext);
+
   return (
     <div className={`relative bg-white dark:bg-gray-800 shadow-lg transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'} min-h-screen border-r border-gray-200 dark:border-gray-700`}>
       {/* Header del Sidebar */}
@@ -97,19 +100,38 @@ const Sidebar = ({ currentPage, onPageChange }) => {
               </div>
             </div>
           )}
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          >
-            <svg 
-              className={`h-5 w-5 text-gray-600 dark:text-gray-300 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              aria-label="Cambiar tema"
+              title={isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-            </svg>
-          </button>
+              {isDarkMode ? (
+                <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 2a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 2zm5.303 2.197a.75.75 0 011.06 1.06l-1.06 1.061a.75.75 0 11-1.06-1.06l1.06-1.061zM16.25 10a.75.75 0 010 1.5h-1.5a.75.75 0 010-1.5h1.5zM10 15.25a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0V16a.75.75 0 01.75-.75zM5.5 10a.75.75 0 01-.75.75H3.25a.75.75 0 010-1.5H4.75A.75.75 0 015.5 10zm.97-4.682a.75.75 0 00-1.06-1.06L4.348 5.318a.75.75 0 101.06 1.06l1.061-1.06zM6.53 14.182a.75.75 0 00-1.06 0l-1.06 1.061a.75.75 0 101.06 1.06l1.06-1.06a.75.75 0 000-1.061zM13.47 14.182a.75.75 0 011.06 0l1.061 1.061a.75.75 0 11-1.06 1.06l-1.061-1.06a.75.75 0 010-1.061z" />
+                  <circle cx="10" cy="10" r="3" className="fill-yellow-300" />
+                </svg>
+              ) : (
+                <svg className="h-5 w-5 text-gray-600 dark:text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" clipRule="evenodd" />
+                </svg>
+              )}
+            </button>
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              <svg 
+                className={`h-5 w-5 text-gray-600 dark:text-gray-300 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 

@@ -1,8 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import productService from '../services/productService';
 import categoryService from '../services/categoryService';
+import { Field, Label, Input, Textarea, HelperText, inputBase } from './ui/Input';
+import { Button } from './ui/Button';
+import { Card, CardHeader, CardContent, CardFooter } from './ui/Card';
 
-const ProductForm = ({ product, onSave, onCancel }) => {
+// ProductForm
+// Props:
+//  - product: objeto existente para edición
+//  - onSave(data, action): callback tras guardar (action: 'created' | 'updated')
+//  - onCancel(): cancelar
+//  - embedded: si true se muestra sin Card/Header porque va dentro de un Modal que ya provee título
+//  - showActions: permite ocultar los botones si se gestionarán externamente (futuro)
+const ProductForm = ({ product, onSave, onCancel, embedded = true, showActions = true, formId = 'product-form', onDirtyChange }) => {
+  const formRef = useRef(null);
   const [formData, setFormData] = useState({
     nombreProducto: '',
     descripcionProducto: '',
@@ -22,6 +33,7 @@ const ProductForm = ({ product, onSave, onCancel }) => {
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categoriesError, setCategoriesError] = useState(null);
   const [pendingCategoryName, setPendingCategoryName] = useState('');
+  const [initialSnapshot, setInitialSnapshot] = useState(null);
 
   // Unidades de medida predefinidas
   const unidadesMedida = [
@@ -105,6 +117,17 @@ const ProductForm = ({ product, onSave, onCancel }) => {
         estadoProducto: product.estadoProducto !== undefined ? product.estadoProducto : true
       });
       setPendingCategoryName(resolvedCategoryName || '');
+      setInitialSnapshot({
+        nombreProducto: product.nombreProducto || '',
+        descripcionProducto: product.descripcionProducto || '',
+        precioVentaProducto: product.precioVentaProducto || '',
+        precioCompraProducto: product.precioCompraProducto || '',
+        stockProducto: product.stockProducto || '',
+        codigoProducto: product.codigoProducto || '',
+        idCategoriaProducto: resolvedCategoryId ? String(resolvedCategoryId) : '',
+        unidadMedidaProducto: product.unidadMedidaProducto || 'unidad',
+        estadoProducto: product.estadoProducto !== undefined ? product.estadoProducto : true
+      });
     } else {
       setIsEditing(false);
       setFormData({
@@ -119,8 +142,26 @@ const ProductForm = ({ product, onSave, onCancel }) => {
         estadoProducto: true
       });
       setPendingCategoryName('');
+      setInitialSnapshot({
+        nombreProducto: '',
+        descripcionProducto: '',
+        precioVentaProducto: '',
+        precioCompraProducto: '',
+        stockProducto: '',
+        codigoProducto: '',
+        idCategoriaProducto: '',
+        unidadMedidaProducto: 'unidad',
+        estadoProducto: true
+      });
     }
   }, [product]);
+
+  // Dirty state detection
+  useEffect(() => {
+    if (!initialSnapshot) return;
+    const isDirty = Object.keys(initialSnapshot).some(key => String(formData[key]) !== String(initialSnapshot[key]));
+    onDirtyChange && onDirtyChange(isDirty);
+  }, [formData, initialSnapshot, onDirtyChange]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -279,296 +320,203 @@ const ProductForm = ({ product, onSave, onCancel }) => {
     }
   };
 
-  return (
-    <div className="max-w-4xl mx-auto">
-      <div className="bg-white rounded-lg shadow-md">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <svg className="h-6 w-6 text-indigo-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {isEditing ? 'Editar Producto' : 'Nuevo Producto'}
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  {isEditing ? 'Modifica la información del producto' : 'Completa los datos del nuevo producto'}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={onCancel}
-              className="text-gray-400 hover:text-gray-600"
+  // Layout Helpers
+  const BasicInfo = (
+    <div className="space-y-6">
+      <div>
+        {!embedded && <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Información Básica</h3>}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <Field>
+            <Label htmlFor="nombreProducto" required>Nombre del Producto</Label>
+            <Input
+              id="nombreProducto"
+              name="nombreProducto"
+              placeholder="Ej: Laptop HP Pavilion"
+              value={formData.nombreProducto}
+              onChange={handleChange}
+              aria-invalid={!!errors.nombreProducto}
+            />
+            <HelperText state={errors.nombreProducto && 'error'}>{errors.nombreProducto}</HelperText>
+          </Field>
+          <Field>
+            <Label htmlFor="codigoProducto" required>Código del Producto</Label>
+            <Input
+              id="codigoProducto"
+              name="codigoProducto"
+              maxLength={10}
+              placeholder="Ej: LAP001"
+              value={formData.codigoProducto}
+              onChange={handleChange}
+              aria-invalid={!!errors.codigoProducto}
+            />
+            <HelperText state={errors.codigoProducto && 'error'}>
+              {errors.codigoProducto || 'Solo letras mayúsculas y números (3-10 caracteres)'}
+            </HelperText>
+          </Field>
+          <Field>
+            <Label htmlFor="idCategoriaProducto" required>Categoría</Label>
+            <select
+              id="idCategoriaProducto"
+              name="idCategoriaProducto"
+              value={formData.idCategoriaProducto}
+              onChange={handleChange}
+              disabled={categoriesLoading || categories.length === 0}
+              className={`${inputBase} ${categoriesLoading ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : ''} ${errors.idCategoriaProducto ? 'border-danger-500' : ''}`}
+              aria-invalid={!!errors.idCategoriaProducto}
             >
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+              <option value="">
+                {categoriesLoading
+                  ? 'Cargando categorías...'
+                  : categories.length === 0
+                    ? 'No hay categorías disponibles'
+                    : 'Selecciona una categoría'}
+              </option>
+              {categories.map(category => (
+                <option key={category.idCategoriaProducto} value={String(category.idCategoriaProducto)}>
+                  {category.nombreCategoriaProducto || category.nombreCategoria}
+                </option>
+              ))}
+            </select>
+            <HelperText state={errors.idCategoriaProducto && 'error'}>
+              {errors.idCategoriaProducto || (categoriesError && !errors.idCategoriaProducto ? categoriesError : '')}
+            </HelperText>
+          </Field>
+          <Field>
+            <Label htmlFor="unidadMedidaProducto" required>Unidad de Medida</Label>
+            <select
+              id="unidadMedidaProducto"
+              name="unidadMedidaProducto"
+              value={formData.unidadMedidaProducto}
+              onChange={handleChange}
+              className={`${inputBase} ${errors.unidadMedidaProducto ? 'border-danger-500' : ''}`}
+              aria-invalid={!!errors.unidadMedidaProducto}
+            >
+              {unidadesMedida.map(unidad => (
+                <option key={unidad} value={unidad}>{unidad.charAt(0).toUpperCase() + unidad.slice(1)}</option>
+              ))}
+            </select>
+            <HelperText state={errors.unidadMedidaProducto && 'error'}>{errors.unidadMedidaProducto}</HelperText>
+          </Field>
         </div>
-
-        {/* Formulario */}
-        <form onSubmit={handleSubmit} className="px-6 py-6">
-          <div className="space-y-6">
-            {/* Información básica */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Información Básica</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Nombre del producto */}
-                <div>
-                  <label htmlFor="nombreProducto" className="block text-sm font-medium text-gray-700 mb-2">
-                    Nombre del Producto *
-                  </label>
-                  <input
-                    type="text"
-                    id="nombreProducto"
-                    name="nombreProducto"
-                    value={formData.nombreProducto}
-                    onChange={handleChange}
-                    className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                      errors.nombreProducto ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="Ej: Laptop HP Pavilion"
-                  />
-                  {errors.nombreProducto && (
-                    <p className="mt-1 text-sm text-red-600">{errors.nombreProducto}</p>
-                  )}
-                </div>
-
-                {/* Código del producto */}
-                <div>
-                  <label htmlFor="codigoProducto" className="block text-sm font-medium text-gray-700 mb-2">
-                    Código del Producto *
-                  </label>
-                  <input
-                    type="text"
-                    id="codigoProducto"
-                    name="codigoProducto"
-                    value={formData.codigoProducto}
-                    onChange={handleChange}
-                    className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                      errors.codigoProducto ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="Ej: LAP001"
-                    maxLength="10"
-                  />
-                  {errors.codigoProducto && (
-                    <p className="mt-1 text-sm text-red-600">{errors.codigoProducto}</p>
-                  )}
-                  <p className="mt-1 text-xs text-gray-500">
-                    Solo letras mayúsculas y números (3-10 caracteres)
-                  </p>
-                </div>
-
-                {/* Categoría */}
-                <div>
-                  <label htmlFor="idCategoriaProducto" className="block text-sm font-medium text-gray-700 mb-2">
-                    Categoría *
-                  </label>
-                  <select
-                    id="idCategoriaProducto"
-                    name="idCategoriaProducto"
-                    value={formData.idCategoriaProducto}
-                    onChange={handleChange}
-                    disabled={categoriesLoading || categories.length === 0}
-                    className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                      errors.idCategoriaProducto ? 'border-red-300' : 'border-gray-300'
-                    } ${categoriesLoading ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                  >
-                    <option value="">
-                      {categoriesLoading
-                        ? 'Cargando categorías...'
-                        : categories.length === 0
-                          ? 'No hay categorías disponibles'
-                          : 'Selecciona una categoría'}
-                    </option>
-                    {categories.map(category => (
-                      <option key={category.idCategoriaProducto} value={String(category.idCategoriaProducto)}>
-                        {category.nombreCategoriaProducto || category.nombreCategoria}
-                      </option>
-                    ))}
-                  </select>
-                  {categoriesError && !errors.idCategoriaProducto && (
-                    <p className="mt-1 text-sm text-yellow-600">{categoriesError}</p>
-                  )}
-                  {errors.idCategoriaProducto && (
-                    <p className="mt-1 text-sm text-red-600">{errors.idCategoriaProducto}</p>
-                  )}
-                </div>
-
-                {/* Unidad de medida */}
-                <div>
-                  <label htmlFor="unidadMedidaProducto" className="block text-sm font-medium text-gray-700 mb-2">
-                    Unidad de Medida *
-                  </label>
-                  <select
-                    id="unidadMedidaProducto"
-                    name="unidadMedidaProducto"
-                    value={formData.unidadMedidaProducto}
-                    onChange={handleChange}
-                    className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                      errors.unidadMedidaProducto ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                  >
-                    {unidadesMedida.map(unidad => (
-                      <option key={unidad} value={unidad}>
-                        {unidad.charAt(0).toUpperCase() + unidad.slice(1)}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.unidadMedidaProducto && (
-                    <p className="mt-1 text-sm text-red-600">{errors.unidadMedidaProducto}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Descripción */}
-            <div>
-              <label htmlFor="descripcionProducto" className="block text-sm font-medium text-gray-700 mb-2">
-                Descripción *
-              </label>
-              <textarea
-                id="descripcionProducto"
-                name="descripcionProducto"
-                value={formData.descripcionProducto}
-                onChange={handleChange}
-                rows="3"
-                className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                  errors.descripcionProducto ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="Describe las características principales del producto..."
-              />
-              {errors.descripcionProducto && (
-                <p className="mt-1 text-sm text-red-600">{errors.descripcionProducto}</p>
-              )}
-            </div>
-
-            {/* Precios y Stock */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Precios e Inventario</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Precio de compra */}
-                <div>
-                  <label htmlFor="precioCompraProducto" className="block text-sm font-medium text-gray-700 mb-2">
-                    Precio de Compra *
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2 text-gray-500">S/</span>
-                    <input
-                      type="text"
-                      id="precioCompraProducto"
-                      name="precioCompraProducto"
-                      value={formData.precioCompraProducto}
-                      onChange={handleChange}
-                      className={`w-full pl-8 pr-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                        errors.precioCompraProducto ? 'border-red-300' : 'border-gray-300'
-                      }`}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  {errors.precioCompraProducto && (
-                    <p className="mt-1 text-sm text-red-600">{errors.precioCompraProducto}</p>
-                  )}
-                </div>
-
-                {/* Precio de venta */}
-                <div>
-                  <label htmlFor="precioVentaProducto" className="block text-sm font-medium text-gray-700 mb-2">
-                    Precio de Venta *
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2 text-gray-500">S/</span>
-                    <input
-                      type="text"
-                      id="precioVentaProducto"
-                      name="precioVentaProducto"
-                      value={formData.precioVentaProducto}
-                      onChange={handleChange}
-                      className={`w-full pl-8 pr-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                        errors.precioVentaProducto ? 'border-red-300' : 'border-gray-300'
-                      }`}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  {errors.precioVentaProducto && (
-                    <p className="mt-1 text-sm text-red-600">{errors.precioVentaProducto}</p>
-                  )}
-                </div>
-
-                {/* Stock */}
-                <div>
-                  <label htmlFor="stockProducto" className="block text-sm font-medium text-gray-700 mb-2">
-                    Stock Inicial *
-                  </label>
-                  <input
-                    type="text"
-                    id="stockProducto"
-                    name="stockProducto"
-                    value={formData.stockProducto}
-                    onChange={handleChange}
-                    className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                      errors.stockProducto ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="0"
-                  />
-                  {errors.stockProducto && (
-                    <p className="mt-1 text-sm text-red-600">{errors.stockProducto}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Estado del producto */}
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="estadoProducto"
-                name="estadoProducto"
-                checked={formData.estadoProducto}
-                onChange={handleChange}
-                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-              />
-              <label htmlFor="estadoProducto" className="ml-2 block text-sm text-gray-700">
-                Producto activo
-              </label>
-            </div>
-
-            {/* Botones de acción */}
-            <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
-              <button
-                type="button"
-                onClick={onCancel}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition duration-150 ease-in-out"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className={`px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150 ease-in-out ${
-                  loading ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              >
-                {loading ? (
-                  <div className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    {isEditing ? 'Actualizando...' : 'Guardando...'}
-                  </div>
-                ) : (
-                  isEditing ? 'Actualizar Producto' : 'Crear Producto'
-                )}
-              </button>
-            </div>
-          </div>
-        </form>
       </div>
     </div>
+  );
+
+  const Description = (
+    <Field>
+      <Label htmlFor="descripcionProducto" required>Descripción</Label>
+      <Textarea
+        id="descripcionProducto"
+        name="descripcionProducto"
+        rows={3}
+        placeholder="Describe las características principales..."
+        value={formData.descripcionProducto}
+        onChange={handleChange}
+        aria-invalid={!!errors.descripcionProducto}
+      />
+      <HelperText state={errors.descripcionProducto && 'error'}>{errors.descripcionProducto}</HelperText>
+    </Field>
+  );
+
+  const Pricing = (
+    <div className="space-y-4">
+      {!embedded && <h3 className="text-base font-semibold text-gray-900 dark:text-white">Precios e Inventario</h3>}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <Field>
+          <Label htmlFor="precioCompraProducto" required>Precio de Compra</Label>
+          <div className="relative">
+            <span className="absolute left-3 top-1.5 text-gray-500 dark:text-gray-400 text-sm">S/</span>
+            <Input
+              id="precioCompraProducto"
+              name="precioCompraProducto"
+              placeholder="0.00"
+              value={formData.precioCompraProducto}
+              onChange={handleChange}
+              className="pl-7"
+              aria-invalid={!!errors.precioCompraProducto}
+            />
+          </div>
+          <HelperText state={errors.precioCompraProducto && 'error'}>{errors.precioCompraProducto}</HelperText>
+        </Field>
+        <Field>
+          <Label htmlFor="precioVentaProducto" required>Precio de Venta</Label>
+          <div className="relative">
+            <span className="absolute left-3 top-1.5 text-gray-500 dark:text-gray-400 text-sm">S/</span>
+            <Input
+              id="precioVentaProducto"
+              name="precioVentaProducto"
+              placeholder="0.00"
+              value={formData.precioVentaProducto}
+              onChange={handleChange}
+              className="pl-7"
+              aria-invalid={!!errors.precioVentaProducto}
+            />
+          </div>
+          <HelperText state={errors.precioVentaProducto && 'error'}>{errors.precioVentaProducto}</HelperText>
+        </Field>
+        <Field>
+          <Label htmlFor="stockProducto" required>Stock Inicial</Label>
+          <Input
+            id="stockProducto"
+            name="stockProducto"
+            placeholder="0"
+            value={formData.stockProducto}
+            onChange={handleChange}
+            aria-invalid={!!errors.stockProducto}
+          />
+          <HelperText state={errors.stockProducto && 'error'}>{errors.stockProducto}</HelperText>
+        </Field>
+      </div>
+    </div>
+  );
+
+  const Status = (
+    <div className="flex items-center gap-2 pt-2">
+      <input
+        type="checkbox"
+        id="estadoProducto"
+        name="estadoProducto"
+        checked={formData.estadoProducto}
+        onChange={handleChange}
+        className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
+      />
+      <Label htmlFor="estadoProducto" className="!mb-0 font-normal">Producto activo</Label>
+    </div>
+  );
+
+  const Actions = showActions && (
+    <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+      <Button type="button" variant="secondary" onClick={onCancel}>Cancelar</Button>
+      <Button type="submit" variant="primary" loading={loading} disabled={loading}>
+        {isEditing ? 'Actualizar Producto' : 'Crear Producto'}
+      </Button>
+    </div>
+  );
+
+  const FormInner = (
+    <form id={formId} ref={formRef} onSubmit={handleSubmit} className="space-y-8">
+      {BasicInfo}
+      {Description}
+      {Pricing}
+      {Status}
+      {Actions}
+    </form>
+  );
+
+  if (embedded) {
+    return <div className="max-w-5xl mx-auto">{FormInner}</div>;
+  }
+
+  return (
+    <Card className="max-w-5xl mx-auto">
+      <CardHeader
+        title={isEditing ? 'Editar Producto' : 'Nuevo Producto'}
+        description={isEditing ? 'Modifica la información del producto' : 'Completa los datos del nuevo producto'}
+      />
+      <CardContent>
+        {FormInner}
+      </CardContent>
+    </Card>
   );
 };
 

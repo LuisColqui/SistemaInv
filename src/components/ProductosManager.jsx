@@ -1,152 +1,131 @@
 import React, { useState } from 'react';
 import ProductList from './ProductList';
 import ProductForm from './ProductForm';
+import Modal from './ui/Modal';
+import ConfirmDialog from './ui/ConfirmDialog';
+import { Button } from './ui/Button';
+import useToast from '../hooks/useToast';
 
 const ProductosManager = () => {
-  const [currentView, setCurrentView] = useState('list'); // 'list' | 'form'
+  // currentView se mantiene solo para el breadcrumb
+  const [currentView, setCurrentView] = useState('list');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [message, setMessage] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
 
-  // Función para mostrar mensajes
+  const { add: pushToast } = useToast();
   const showMessage = (text, type = 'success') => {
-    setMessage({ text, type });
-    setTimeout(() => setMessage(null), 5000); // Auto-hide después de 5 segundos
+    pushToast({
+      title: type === 'error' ? 'Error' : type === 'info' ? 'Información' : 'Éxito',
+      description: text,
+      variant: type,
+    });
   };
 
-  // Manejar creación de nuevo producto
-  const handleNewProduct = () => {
-    setSelectedProduct(null);
-    setCurrentView('form');
-    setMessage(null);
-  };
-
-  // Manejar edición de producto
-  const handleEditProduct = (product) => {
+  const openForm = (product = null) => {
     setSelectedProduct(product);
     setCurrentView('form');
-    setMessage(null);
+    setIsModalOpen(true);
   };
 
-  // Manejar cancelación del formulario
-  const handleCancelForm = () => {
+  const handleNewProduct = () => openForm(null);
+  const handleEditProduct = (product) => openForm(product);
+
+  const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
+
+  const performClose = () => {
     setSelectedProduct(null);
     setCurrentView('list');
-    setMessage(null);
+    setIsModalOpen(false);
+    setFormDirty(false);
   };
 
-  // Manejar guardado del producto
+  const handleCancelForm = () => {
+    if (formDirty) {
+      setConfirmDiscardOpen(true);
+      return;
+    }
+    performClose();
+  };
+
   const handleSaveProduct = (savedProduct, action) => {
     setSelectedProduct(null);
     setCurrentView('list');
-    setRefreshTrigger(prev => prev + 1); // Trigger refresh de la lista
-    
-    // Mostrar mensaje de éxito
+    setRefreshTrigger(prev => prev + 1);
+    setIsModalOpen(false);
     const actionText = action === 'created' ? 'creado' : 'actualizado';
     showMessage(`Producto "${savedProduct.nombreProducto}" ${actionText} correctamente`);
   };
 
-  // Función para cerrar mensajes manualmente
-  const closeMessage = () => {
-    setMessage(null);
-  };
-
   return (
     <div className="space-y-6">
-      {/* Mensaje de notificación */}
-      {message && (
-        <div className={`p-4 rounded-lg border ${
-          message.type === 'success' 
-            ? 'bg-green-50 border-green-200 text-green-700' 
-            : message.type === 'error'
-            ? 'bg-red-50 border-red-200 text-red-700'
-            : 'bg-blue-50 border-blue-200 text-blue-700'
-        }`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              {message.type === 'success' && (
-                <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                </svg>
-              )}
-              {message.type === 'error' && (
-                <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              )}
-              {message.type === 'info' && (
-                <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              )}
-              <span>{message.text}</span>
-            </div>
-            <button
-              onClick={closeMessage}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Breadcrumb */}
       <nav className="flex" aria-label="Breadcrumb">
         <ol className="inline-flex items-center space-x-1 md:space-x-3">
           <li className="inline-flex items-center">
-            <button
-              onClick={() => {
-                if (currentView !== 'list') {
-                  handleCancelForm();
-                }
-              }}
-              className={`inline-flex items-center text-sm font-medium hover:text-indigo-600 ${
-                currentView === 'list' ? 'text-indigo-600' : 'text-gray-500'
-              }`}
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
-              Productos
-            </button>
+            <span className="text-sm font-medium text-gray-500">Productos</span>
           </li>
           {currentView === 'form' && (
-            <li>
-              <div className="flex items-center">
-                <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
-                <span className="text-sm font-medium text-gray-500 ml-1 md:ml-2">
-                  {selectedProduct ? 'Editar' : 'Nuevo'}
-                </span>
-              </div>
+            <li className="inline-flex items-center">
+              <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
+              <span className="text-sm font-medium text-gray-500 ml-1 md:ml-2">
+                {selectedProduct ? 'Editar' : 'Nuevo'}
+              </span>
             </li>
           )}
         </ol>
       </nav>
 
-      {/* Contenido principal */}
-      <div>
-        {currentView === 'list' ? (
-          <ProductList
-            onEditProduct={handleEditProduct}
-            onNewProduct={handleNewProduct}
-            refreshTrigger={refreshTrigger}
-          />
-        ) : (
-          <ProductForm
-            product={selectedProduct}
-            onSave={handleSaveProduct}
-            onCancel={handleCancelForm}
-          />
-        )}
-      </div>
+      {/* Lista de productos */}
+      <ProductList
+        onEditProduct={handleEditProduct}
+        onNewProduct={handleNewProduct}
+        refreshTrigger={refreshTrigger}
+      />
 
-      {/* Modal de confirmación para cambios no guardados (si fuera necesario) */}
-      {/* Este modal se podría implementar más tarde para mejorar la UX */}
+      <Modal
+        open={isModalOpen}
+        title={selectedProduct ? 'Editar Producto' : 'Nuevo Producto'}
+        description={selectedProduct ? 'Modifica la información del producto' : 'Completa los datos para registrar un nuevo producto'}
+        onClose={handleCancelForm}
+        size="full"
+        fullHeight={false}
+        bodyClassName="pt-2"
+        actions={
+          <>
+            <Button variant="secondary" type="button" onClick={handleCancelForm}>Cancelar</Button>
+            <Button variant="primary" type="submit" form="product-form">{selectedProduct ? 'Actualizar' : 'Crear'} Producto</Button>
+          </>
+        }
+      >
+        <ProductForm
+          product={selectedProduct}
+          onSave={handleSaveProduct}
+          onCancel={handleCancelForm}
+          embedded
+          showActions={false}
+          formId="product-form"
+          onDirtyChange={setFormDirty}
+        />
+      </Modal>
+      <ConfirmDialog
+        open={confirmDiscardOpen}
+        title="Descartar cambios"
+        description="Hay cambios sin guardar. ¿Deseas descartarlos?"
+        confirmLabel="Descartar"
+        cancelLabel="Volver"
+        variant="danger"
+        onConfirm={() => {
+          setConfirmDiscardOpen(false);
+          performClose();
+        }}
+        onCancel={() => setConfirmDiscardOpen(false)}
+      />
+
+      {/* Futuro: modal de confirmación personalizado para cambios no guardados */}
     </div>
   );
 };
